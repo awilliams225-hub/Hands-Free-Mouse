@@ -1,0 +1,72 @@
+
+# Capturing video image
+
+import cv2
+
+# Detect the hand
+import mediapipe as mp      # give mediapipe the name mp
+
+import pyautogui            #moves cursor
+hand_detector = mp.solutions.hands.Hands()      # hand method for hand detection
+drawing_utils = mp.solutions.drawing_utils
+screen_width, screen_height = pyautogui.size()
+index_y = 0                                     # changes as while loop runs
+
+# capturing the first video source
+cap = cv2.VideoCapture(0)
+
+
+
+# endless loop while camera is on
+while True:
+    # capture the video frame
+    _, frame = cap.read()
+    frame = cv2.flip(frame, 1)   # x axis multiplied by width of frame, also gets ride of flipped image
+    frame_height, frame_width, _ = frame.shape
+
+    # Use cv2 to convert the color in the frame
+    # there is rgb and grayscale option
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # process the rgb frame using hand detector
+    output = hand_detector.process(rgb_frame)
+    hands = output.multi_hand_landmarks
+
+    # for every landmark (22 on hand) for every hand , draw them
+    # media pipe can draw it (drawing_utils)
+    if hands:
+        for hand in hands:
+            drawing_utils.draw_landmarks(frame, hand)
+    # print(hands) original coordinates
+            landmarks = hand.landmark
+            # get the index of every landmark (for pointer finger scroll)
+            for id, landmark in enumerate(landmarks):
+                x = int(landmark.x*frame_width)
+                y = int(landmark.y*frame_height)
+
+                # now get values only for index finger
+                # print(x,y)
+
+                if id == 8:
+                    # identify and circle tip of finger
+                    cv2.circle(img=frame, center=(x,y), radius=10, color=(0,255,255))
+                    index_x = screen_width/frame_width*x
+                    index_y = screen_height/frame_height*y
+                    pyautogui.moveTo(index_x,index_y)
+
+                # adding click feature (hand landmark 4 is tip of thumb)
+                if id == 4:
+                    # identify and circle tip of finger
+                    cv2.circle(img=frame, center=(x, y), radius=10, color=(0, 255, 255))
+                    thumb_x = screen_width / frame_width*x
+                    thumb_y = screen_height / frame_height*y
+                    print('outside', abs(index_y-thumb_y))
+
+                    if abs(index_y - thumb_y) < 30:
+                        pyautogui.click()
+                        pyautogui.sleep(1)
+
+                # if the distance between thumb x and index y comes closer to zero
+                #click operation occuring
+
+    cv2.imshow('HandsFree', frame)  # display image (name of frame and the frame)
+    cv2.waitKey(1)
